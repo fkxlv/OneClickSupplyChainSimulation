@@ -3,8 +3,8 @@ from marshmallow import ValidationError
 import uuid
 
 # Импортируем нашу логику и схему
-from planner.logic import analyze_user_intent
-from shared.schemas.planner import PlannerOutputSchema
+from .logic import analyze_user_intent
+from backend.shared.schemas.planner import PlannerOutputSchema
 
 # Создаем Blueprint вместо app, чтобы подключить его в __init__.py
 bp = Blueprint('planner', __name__)

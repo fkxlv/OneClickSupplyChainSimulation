@@ -2,7 +2,7 @@ import os
 import json
 from pathlib import Path
 import google.generativeai as genai
-from shared.schemas.planner import PlannerOutputSchema
+from backend.shared.schemas.planner import PlannerOutputSchema
 from dotenv import load_dotenv
 
 # 1. Загружаем переменные окружения
