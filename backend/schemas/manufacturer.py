@@ -1,5 +1,5 @@
 from marshmallow import Schema, fields, EXCLUDE
-from shared.schemas.execution import ContractTermsSchema
+from .execution import ContractTermsSchema
 
 
 class ManufacturerNegotiationRequestSchema(Schema):

@@ -1,6 +1,6 @@
 from marshmallow import Schema, fields, validate, EXCLUDE
-from shared.schemas.planner import PlannerOutputSchema
-from shared.schemas.sourcing import SourcingResultSchema
+from .planner import PlannerOutputSchema
+from .sourcing import SourcingResultSchema
 
 
 class ExecutionRequestSchema(Schema):
