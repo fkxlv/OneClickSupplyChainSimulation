@@ -1,6 +1,5 @@
 import logging
 import requests
-import manufacturer as manufacturer_module
 
 DNS_URL = "http://127.0.0.1:5000/registry"
 
@@ -51,7 +50,7 @@ def negotiate_with_manufacturer(supplier, manufacturer):
     payload = "Can I buy it?"
     try:
         # TODO: change to a valid request -- keep emailing behavior for now
-        email = manufacturer_module.main.send_email(payload)
+        email = send_mail(manufacturer, payload)
         status = getattr(email, "status_code", None)
         logger.debug("negotiate_with_manufacturer: email status=%s", status)
         if status != 200:
@@ -61,29 +60,16 @@ def negotiate_with_manufacturer(supplier, manufacturer):
         logger.exception("negotiate_with_manufacturer: emailing failed")
         return False
 
+def send_mail():
+    class Response:
+        def __init__(self, code):
+            self.status_code = code
+
+    return Response(200)
 
 def success(supplier, manufacturer):
     logger.debug("success: supplier=%s manufacturer=%s", supplier, manufacturer)
-    planner = get_agent({"role": "planner"})
-    if not planner or planner.get("endpoint") is None:
-        logger.error("success: planner agent not found")
-        return
-
-    try:
-        req = requests.post(planner["endpoint"] + "/success", json={"supplier": supplier})
-        logger.debug("success: planner responded status=%s", getattr(req, "status_code", None))
-    except Exception:
-        logger.exception("success: failed to notify planner")
 
 
 def failed_to_negotiate():
     logger.debug("failed_to_negotiate called")
-    planner = get_agent({"role": "planner"})
-    if not planner or planner.get("endpoint") is None:
-        logger.error("failed_to_negotiate: planner agent not found")
-        return
-    try:
-        req = requests.post(planner["endpoint"] + "/failed")
-        logger.debug("failed_to_negotiate: planner responded status=%s", getattr(req, "status_code", None))
-    except Exception:
-        logger.exception("failed_to_negotiate: request failed")
