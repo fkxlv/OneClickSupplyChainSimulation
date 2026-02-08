@@ -1,8 +1,12 @@
 import logging
 import requests
 
-DNS_URL = "http://127.0.0.1:5000/registry"
+import os
+import json
+import google.generativeai as genai
 
+DNS_URL = "http://127.0.0.1:5000/registry"
+genai.configure(api_key="AIzaSyAbeTivu3l0VBxX52fsnRjzTli-s98aNvo")
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
@@ -24,6 +28,8 @@ def get_agent(query):
 
 
 def receive_from_sourcing(data):
+    model = genai.GenerativeModel('models/gemini-2.5-flash')
+
     logger.debug("receive_from_sourcing: data=%s", data)
     if "ranked_suppliers" not in data or data["ranked_suppliers"] is None:
         logger.debug("receive_from_sourcing: missing ranked_suppliers")
@@ -39,21 +45,62 @@ def receive_from_sourcing(data):
     print("going through supplies")
     for supplier in data["ranked_suppliers"]:
         try:
-            if negotiate_with_manufacturer(supplier, manufacturer_agent):
+            if negotiate_with_manufacturer(supplier, manufacturer_agent, model):
                 print("success")
                 success(supplier, manufacturer_agent)
                 break
         except Exception:
             logger.exception("Error negotiating with supplier %s", supplier)
 
+def create_email(supplier, model):
+    prompt = f"""
+    SYSTEM
+    You are a procurement specialist writing professional supplier emails.
+    Return ONLY the email body text.
+    No subject line. No markdown. No JSON. No explanations.
 
-def negotiate_with_manufacturer(supplier, manufacturer):
+    USER
+    Write a clean, concise, and professional email to the supplier below.
+    We want to purchase from them and request a formal quotation.
+    Mention the supplier name, the capabilities, and ask for:
+
+    total price for the order
+    lead time
+    payment terms
+    shipping terms (Incoterms)
+    certifications / QA details
+
+    Keep it short, polite, and business-like. The information about supplier:
+    {supplier}
+    """
+
+    try:
+        response = model.generate_content(prompt)
+    
+        text = response.text.strip()
+
+        print("___THE EMAIL____")
+        print(text)
+        
+        return text
+
+    except Exception as e:
+        print(f"!!! LLM FAIL: {e}")
+        return """
+            Dear {supplier["name"]},
+            We would like to purschase your product. Can you send us the agreement details and costs please.
+            Best regards
+        """
+
+def negotiate_with_manufacturer(supplier, manufacturer, model):
     logger.debug("negotiate_with_manufacturer: supplier=%s manufacturer=%s", supplier, manufacturer)
-    payload = "Can I buy it?"
+    
+    email = create_email(supplier, model)
+
     try:
         # TODO: change to a valid request -- keep emailing behavior for now
-        email = requests.get(manufacturer["endpoint"] + "/email")
-        status = getattr(email, "status_code", None)
+        response = requests.get(manufacturer["endpoint"] + "/email", json=email)
+        status = getattr(response, "status_code", None)
         logger.debug("negotiate_with_manufacturer: email status=%s", status)
         if status != 200:
             return False
