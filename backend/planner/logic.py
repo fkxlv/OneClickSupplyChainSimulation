@@ -7,16 +7,7 @@ from dotenv import load_dotenv
 
 # 1. Загружаем переменные окружения
 load_dotenv()
-api_key = os.getenv("GEMINI_API_KEY")
-
-if not api_key:
-    # Попробуем поискать файл .env вручную, если load_dotenv не подцепил
-    env_path = Path(__file__).parent.parent / '.env'
-    load_dotenv(dotenv_path=env_path)
-    api_key = os.getenv("GEMINI_API_KEY")
-
-if not api_key:
-    raise ValueError("❌ ОШИБКА: Не найден GEMINI_API_KEY в файле .env")
+api_key = "AIzaSyCq2h7jVlCvGwdSH627MV7ChrYZ6GinBSc"
 
 genai.configure(api_key=api_key)
 

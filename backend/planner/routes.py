@@ -2,14 +2,38 @@ from flask import Blueprint, request, jsonify
 from marshmallow import ValidationError
 import uuid
 
+import logging
+import requests
+
 # Импортируем нашу логику и схему
-from planner.logic import analyze_user_intent
-from shared.schemas.planner import PlannerOutputSchema
+from .logic import analyze_user_intent
+from backend.schemas.planner import PlannerOutputSchema
 
 # Создаем Blueprint вместо app, чтобы подключить его в __init__.py
 bp = Blueprint('planner', __name__)
 
 output_schema = PlannerOutputSchema()
+
+DNS_URL = "http://127.0.0.1:5000/registry"
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+def get_agent(query):
+    logger.debug("get_agent: query=%s", query)
+    try:
+        resp = requests.post(DNS_URL + "/discover", json=query, timeout=5)
+        resp.raise_for_status()
+        try:
+            result = resp.json()
+            logger.debug("get_agent: response json=%s", result)
+            return result
+        except ValueError:
+            logger.debug("get_agent: non-json response: %s", resp.text)
+            return None
+    except Exception:
+        logger.exception("get_agent: request failed")
+        return None
+
 
 @bp.route("/plan", methods=["POST"])
 def generate_plan():
@@ -36,6 +60,12 @@ def generate_plan():
         # load проверит типы данных и обязательные поля
         validated_data = output_schema.load(raw_result)
         
+        sourcing = get_agent({"role": "sourcing"})['matches'][0]
+        if not sourcing or sourcing.get("endpoint") is None:
+            logger.error("Cannot find the sourcing agent")
+        else:
+            request.post(sourcing["endpoint"] + "/source", json=validated_data)
+
         # Если всё ок, возвращаем результат
         return jsonify(validated_data), 200
 

@@ -9,7 +9,7 @@ def create_app(test_config=None):
     CORS(app, resources={r"/*": {"origins": "*"}}) 
 
     # ... остальной код регистрации ...
-    from planner.routes import bp as planner_bp
+    from .routes import bp as planner_bp
     app.register_blueprint(planner_bp, url_prefix='/planner')
 
     return app
