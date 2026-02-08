@@ -4,6 +4,7 @@ import requests
 import os
 import json
 import google.generativeai as genai
+from flask import make_response
 
 DNS_URL = "http://127.0.0.1:5000/registry"
 genai.configure(api_key="AIzaSyAbeTivu3l0VBxX52fsnRjzTli-s98aNvo")
@@ -32,23 +33,20 @@ def receive_from_sourcing(data):
 
     logger.debug("receive_from_sourcing: data=%s", data)
     if "ranked_suppliers" not in data or data["ranked_suppliers"] is None:
-        logger.debug("receive_from_sourcing: missing ranked_suppliers")
-        failed_to_negotiate()
-        return
+        logger.warning("receive_from_sourcing: missing ranked_suppliers")
+        return failed_to_negotiate()
 
     manufacturer_agent = get_agent({"role": "manufacturer"})['matches'][0]
     if not manufacturer_agent or manufacturer_agent.get("endpoint") is None:
         logger.debug("receive_from_sourcing: manufacturer agent not found")
-        failed_to_negotiate()
-        return
+        return failed_to_negotiate()
 
     print("going through supplies")
     for supplier in data["ranked_suppliers"]:
         try:
             if negotiate_with_manufacturer(supplier, manufacturer_agent, model):
                 print("success")
-                success(supplier, manufacturer_agent)
-                break
+                return success(supplier, manufacturer_agent)
         except Exception:
             logger.exception("Error negotiating with supplier %s", supplier)
 
@@ -111,7 +109,9 @@ def negotiate_with_manufacturer(supplier, manufacturer, model):
 
 def success(supplier, manufacturer):
     logger.debug("success: supplier=%s manufacturer=%s", supplier, manufacturer)
+    return make_response("Successfully made a deal", 200)
 
 
 def failed_to_negotiate():
     logger.debug("failed_to_negotiate called")
+    return make_response("Due to server side issues could not made a deal", 500)

@@ -2,7 +2,6 @@ import os
 
 from flask import Flask
 from flask_cors import CORS
-from backend import *
 
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
@@ -31,3 +30,7 @@ def create_app(test_config=None):
         return "THE EXECUTION AGENT!"
     
     return app
+
+if __name__ == "__main__":
+    app = create_app()
+    app.run(port=5003, debug=True)
