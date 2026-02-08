@@ -1,8 +1,8 @@
 import os
 import json
 import requests
-import google.generativeai as genai
-from shared.schemas.sourcing import SourcingResultSchema
+import google.genai as genai
+from backend.schemas.sourcing import SourcingResultSchema
 
 # Configure Gemini
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
