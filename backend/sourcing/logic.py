@@ -1,28 +1,59 @@
 import os
-import uuid
+import json
 import requests
-from typing import List, Dict
+import google.generativeai as genai
+from shared.schemas.sourcing import SourcingResultSchema
 
-from marshmallow import ValidationError
-from shared.schemas.sourcing import SupplierSchema, SourcingResultSchema
-from shared.schemas.planner import PlannerOutputSchema
+# Configure Gemini
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+model = genai.GenerativeModel("gemini-1.5-flash")
 
-from google.generativeai import GenerativeModel, configure
-
-
-# ========== CONFIG ==========
-SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
-configure(api_key=GEMINI_API_KEY)
-gemini = GenerativeModel("gemini-1.5-flash")
+SERPAPI_API_KEY = os.environ.get("SERPAPI_API_KEY")
 
 
-# ========== SEARCH ==========
-def search_suppliers(product: str, region: str) -> List[Dict]:
-    if not SERPAPI_API_KEY:
-        raise RuntimeError("SERPAPI_API_KEY missing")
+def search_suppliers(product: str, region: str) -> list[dict]:
+    """
+    Searches suppliers using SerpAPI and returns a simple list.
+    """
+    params = {
+        "q": f"{product} supplier manufacturer {region}",
+        "engine": "google",
+        "api_key": SERPAPI_API_KEY,
+        "num": 7
+    }
 
+    r = requests.get("https://serpapi.com/search", params=params)
+    r.raise_for_status()
+    results = r.json()
+
+    suppliers = []
+    for item in results.get("organic_results", []):
+        suppliers.append({
+            "name": item.get("title"),
+            "website": item.get("link"),
+            "region": region,
+            "capabilities": [product]
+        })
+
+    return suppliers
+
+import os
+import json
+import requests
+import google.generativeai as genai
+from shared.schemas.sourcing import SourcingResultSchema
+
+# Configure Gemini
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+model = genai.GenerativeModel("gemini-1.5-flash")
+
+SERPAPI_API_KEY = os.environ.get("SERPAPI_API_KEY")
+
+
+def search_suppliers(product: str, region: str) -> list[dict]:
+    """
+    Searches suppliers using SerpAPI and returns a simple list.
+    """
     params = {
         "q": f"{product} supplier manufacturer {region}",
         "engine": "google",
@@ -37,8 +68,8 @@ def search_suppliers(product: str, region: str) -> List[Dict]:
     suppliers = []
     for item in results.get("organic_results", []):
         suppliers.append({
-            "supplier_id": str(uuid.uuid4()),
             "name": item.get("title"),
+            "website": item.get("link"),
             "region": region,
             "capabilities": [product]
         })
@@ -46,6 +77,60 @@ def search_suppliers(product: str, region: str) -> List[Dict]:
     return suppliers
 
 
+def estimate_and_rank_with_gemini(
+    request_id: str,
+    heuristic: str,
+    suppliers: list[dict]
+) -> dict:
+    """
+    Sends suppliers to Gemini and asks it to estimate values
+    and return a valid SourcingResultSchema JSON.
+    """
+    prompt = f"""
+    You are a Supply Chain Sourcing AI.
+
+    Given the suppliers below, estimate:
+    - base_unit_cost
+    - base_lead_time_days
+    - min_total_price
+    - max_total_price
+    - max_lead_time_days
+
+    Then rank suppliers based on heuristic: "{heuristic}"
+
+    Suppliers:
+    {json.dumps(suppliers, indent=2)}
+
+    Return ONLY valid JSON in this exact format:
+    {{
+        "request_id": "{request_id}",
+        "heuristic": "{heuristic}",
+        "ranked_suppliers": [
+            {{
+                "supplier_id": "string",
+                "name": "string",
+                "region": "string",
+                "capabilities": ["string"],
+                "base_unit_cost": float,
+                "base_lead_time_days": int,
+                "min_total_price": float,
+                "max_total_price": float,
+                "max_lead_time_days": int
+            }}
+        ],
+        "notes": "string"
+    }}
+    """
+
+    response = model.generate_content(prompt)
+    cleaned = response.text.replace("```json", "").replace("```", "").strip()
+    parsed = json.loads(cleaned)
+
+    # Validate schema
+    SourcingResultSchema().load(parsed)
+    return parsed
+
+"""
 # ========== COST & LOGISTICS ==========
 def estimate_supplier_metrics(
     supplier: Dict,
@@ -72,7 +157,9 @@ def estimate_supplier_metrics(
 # ========== GEMINI RANKING ==========
 def rank_with_gemini(
     suppliers: List[Dict],
-    heuristic: str
+    heuristic: str,
+    product: str,
+    region: str
 ) -> List[Dict]:
 
     prompt = {
@@ -81,7 +168,25 @@ def rank_with_gemini(
     }
 
     response = gemini.generate_content(
-        f"{prompt}\nReturn JSON only."
+        fYou are an expert Supply Chain Analytics AI.
+        Your goal is to rank the suppliers based on who is the most optimal one.
+        The product is {product}. You are ordering from region {region}. 
+        Consider the logistics price: consider the purchase region and the region of the supplier.
+        Rank the suppliers based on the given heuristic ({heuristic}).
+        Given suppliers are {suppliers}
+        You must output a valid JSON object that lists suppliers matching this structure EXACTLY:
+        {
+            "supplier_id": "https://abc-fasteners.de",
+            "name": "ABC Fasteners GmbH",
+            "region": "Germany",
+            "capabilities": ["steel bolts"],
+            "base_unit_cost": 4.2,
+            "base_lead_time_days": 9,
+            "min_total_price": 4700,
+            "max_total_price": 5200,
+            "max_lead_time_days": 14
+}
+        
     )
 
     data = response.text.strip().replace("```json", "").replace("```", "")
@@ -146,4 +251,4 @@ def run_sourcing(planner_json: Dict) -> Dict:
     }
 
     SourcingResultSchema().load(result)
-    return result
+    return result"""
