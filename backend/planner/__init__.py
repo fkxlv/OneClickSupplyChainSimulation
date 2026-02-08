@@ -1,13 +1,10 @@
 import os
-
 from flask import Flask
 from flask_cors import CORS
-from flask_marshmallow import Marshmallow
 
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
-    cors = CORS(app)
-    ma = Marshmallow(app)
+    CORS(app) # Разрешаем запросы с фронтенда
 
     app.config.from_mapping(
         SECRET_KEY='dev',
@@ -24,8 +21,12 @@ def create_app(test_config=None):
     except OSError:
         pass
 
+    # --- РЕГИСТРАЦИЯ РОУТОВ ---
+    from planner.routes import bp as planner_bp
+    app.register_blueprint(planner_bp, url_prefix='/planner')
+
     @app.route('/')
     def index():
-        return "THE PLANNER AGENT!"
+        return "Planner Agent is Online 🟢"
     
     return app

@@ -1,8 +1,21 @@
 import os
 import json
+from pathlib import Path
 import google.generativeai as genai
 from shared.schemas.planner import PlannerOutputSchema
+from dotenv import load_dotenv  # <--- 1. Импортируем загрузчик
 
+# 2. Загружаем переменные из файла .env в память
+load_dotenv()
+env_path = Path(__file__).parent.parent / '.env.example' 
+load_dotenv(dotenv_path=env_path)
+
+api_key = os.getenv("GEMINI_API_KEY")
+
+if not api_key:
+    raise ValueError("❌ ОШИБКА: Не найден GEMINI_API_KEY в файле .env")
+
+genai.configure(api_key=api_key)
 # Настройка Gemini
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
@@ -10,7 +23,7 @@ def analyze_user_intent(user_intent: str, request_id: str) -> dict:
     """
     Отправляет запрос в LLM и возвращает словарь, валидный по PlannerOutputSchema.
     """
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('models/gemini-2.0-flash-lite')
 
     # Получаем строковое описание схемы, чтобы LLM знала, в каком формате отвечать
     schema_structure = json.dumps(PlannerOutputSchema().fields, default=str) 
@@ -55,7 +68,7 @@ def analyze_user_intent(user_intent: str, request_id: str) -> dict:
         return {
             "request_id": request_id,
             "product": "unknown",
-            "quantity": 0,
+            "quantity": 1,
             "constraints": {},
             "heuristic": "cost",
             "missing_information": ["Failed to parse intent"],
