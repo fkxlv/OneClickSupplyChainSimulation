@@ -21,6 +21,10 @@ def create_app(test_config=None):
     except OSError:
         pass
 
+    from . import routes
+
+    app.register_blueprint(routes.execution_bp, url_prefix="/execution")
+
     @app.route('/')
     def index():
         return "THE EXECUTION AGENT!"
