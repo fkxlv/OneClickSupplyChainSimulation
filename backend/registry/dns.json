@@ -27,7 +27,7 @@
         ]
     },
     {
-        "agent_id": "execution_1",
+        "agent_id": "execution",
         "role": "execution",
         "endpoint": "http://127.0.0.1:5003",
         "capabilities": [
@@ -41,7 +41,7 @@
         ]
     },
     {
-        "agent_id": "manufacturer_1",
+        "agent_id": "manufacturer",
         "role": "manufacturer",
         "endpoint": "http://127.0.0.1:5004",
         "capabilities": [
