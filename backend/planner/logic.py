@@ -22,7 +22,7 @@ genai.configure(api_key=api_key)
 
 def analyze_user_intent(user_intent: str, request_id: str) -> dict:
     # Используем модель, которая точно есть в твоем списке
-    model = genai.GenerativeModel('models/gemini-2.0-flash')
+    model = genai.GenerativeModel('models/gemini-1.5-flash')
 
     prompt = f"""
     You are an expert Supply Chain Planner AI. Parse User Intent into JSON.

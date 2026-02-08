@@ -6,7 +6,9 @@ import { Play, Activity, Box, MapPin, ClipboardList, Brain, CheckCircle } from '
 import 'reactflow/dist/style.css';
 import './App.css';
 import AgentNode from './AgentNode';
+import { io } from "socket.io-client";
 
+const socket = io('http://localhost:5001');
 const nodeTypes = { agent: AgentNode };
 
 export default function App() {
