@@ -7,16 +7,14 @@ import ReactFlow, {
   MarkerType 
 } from 'reactflow';
 import io from 'socket.io-client';
-import { Play, Activity, Terminal, Database, Truck, Factory, User } from 'lucide-react';
+import { Play, Activity, Database, Box, MapPin, ClipboardList, Brain, Terminal } from 'lucide-react';
 import 'reactflow/dist/style.css';
 import './App.css';
 import AgentNode from './AgentNode';
 
-const nodeTypes = { agent: AgentNode }; // Регистрируем тип узла
-// Подключение к бэкенду (Python/FastAPI)
+const nodeTypes = { agent: AgentNode };
 const socket = io('http://localhost:8000'); 
 
-// Начальный узел - это наш Orchestrator (Закупщик)
 const initialNodes = [
   { 
     id: 'orchestrator', 
@@ -33,195 +31,189 @@ export default function App() {
   const [intent, setIntent] = useState('');
   const [logs, setLogs] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Состояние для данных из Gemini
+  const [planData, setPlanData] = useState(null);
 
-  // Функция добавления логов
   const addLog = (message) => {
     setLogs((prev) => [`[${new Date().toLocaleTimeString()}] ${message}`, ...prev]);
   };
 
-  // Слушаем события от бэкенда через Socket.io
-  useEffect(() => {
-    socket.on('graph_update', (event) => {
-      console.log("Received event:", event);
+  // Вызов API Бэкенда
+  const fetchPlan = async (userIntent) => {
+    try {
+      const response = await fetch('http://127.0.0.1:5001/planner/plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          intent: userIntent, 
+          request_id: `req-${Math.random().toString(36).substr(2, 9)}` 
+        })
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("API Error:", error);
+      return null;
+    }
+  };
 
-      // 1. НАЙДЕН НОВЫЙ АГЕНТ (Добавляем узел)
-      if (event.type === 'AGENT_FOUND') {
-        const { id, role, label } = event.data;
-        
-        // Выбираем иконку/цвет по роли
-        let bgColor = '#10B981'; // Green for generic
-        if (role === 'Supplier') bgColor = '#F59E0B'; // Orange
-        if (role === 'Logistics') bgColor = '#3B82F6'; // Blue
-        if (role === 'Registry') bgColor = '#EC4899'; // Pink
-
-        const newNode = {
-          id: id,
-          data: { label: label },
-          // Случайная позиция вокруг центра (для демо)
-          position: { 
-            x: 400 + (Math.random() - 0.5) * 500, 
-            y: 300 + (Math.random() - 0.5) * 400 
-          },
-          style: { background: bgColor, color: 'white', border: 'none', borderRadius: '8px' }
-        };
-        setNodes((nds) => nds.concat(newNode));
-        addLog(`Found agent: ${label} (${role})`);
-      }
-
-      // 2. ПЕРЕГОВОРЫ (Рисуем анимированную линию)
-      if (event.type === 'NEGOTIATION_START') {
-        const { from, to } = event;
-        const newEdge = {
-          id: `e-${from}-${to}`,
-          source: from,
-          target: to,
-          animated: true, // Включает анимацию "потока данных"
-          style: { stroke: '#00ffff', strokeWidth: 2 },
-          markerEnd: { type: MarkerType.ArrowClosed, color: '#00ffff' },
-        };
-        setEdges((eds) => eds.concat(newEdge));
-        addLog(`Negotiation started: ${from} <-> ${to}`);
-      }
-
-      // 3. СДЕЛКА ЗАКРЫТА (Линия становится зеленой и статической)
-      if (event.type === 'DEAL_CLOSED') {
-        const { edgeId, price } = event;
-        setEdges((eds) =>
-          eds.map((edge) => {
-            if (edge.id === edgeId) {
-              return {
-                ...edge,
-                animated: false,
-                style: { stroke: '#10B981', strokeWidth: 4 }, // Жирная зеленая линия
-                label: `Confirmed: $${price}` // Показываем цену на линии
-              };
-            }
-            return edge;
-          })
-        );
-        addLog(`✅ Deal confirmed for connection ${edgeId}`);
-      }
-
-      // 4. ПРОСТО ЛОГ МЫСЛЕЙ (Gemini Reasoning)
-      if (event.type === 'LOG') {
-        addLog(`🧠 ${event.message}`);
-      }
-    });
-
-    return () => {
-      socket.off('graph_update');
-    };
-  }, [setNodes, setEdges]);
-
-  // Нажатие кнопки "One Click"
- const handleExecute = async () => {
-  if (!intent) return;
-  setIsProcessing(true);
-  
-  // 1. Очистка старого графа (оставляем только Orchestrator)
-  setNodes(initialNodes);
-  setEdges([]);
-
-  // --- ШАГ 1: Обращение к Реестру (Registry) ---
-  const registryId = 'reg_1';
-  setTimeout(() => {
-    setNodes((nds) => nds.concat({
-      id: registryId,
-      type: 'agent',
-      data: { label: 'Global Registry', role: 'Registry', status: 'Searching database...' },
-      position: { x: 400, y: 100 },
-    }));
+  const handleExecute = async () => {
+    if (!intent) return;
+    setIsProcessing(true);
+    setPlanData(null); // Сброс старых данных
+    setNodes(initialNodes);
+    setEdges([]);
     
-    setEdges((eds) => eds.concat({
-      id: 'e-org-reg',
-      source: 'orchestrator',
-      target: registryId,
-      label: 'Requesting Suppliers',
-      animated: true,
-      style: { stroke: '#EC4899' },
-      labelStyle: { fill: '#EC4899', fontSize: 10 }
-    }));
-  }, 1000);
+    addLog("🧠 Analyzing intent with Gemini AI...");
 
-  // --- ШАГ 2: Реестр выдает Поставщика ---
-  const supplierId = 'supp_1';
-  setTimeout(() => {
-    // Обновляем статус реестра
-    setNodes((nds) => nds.map(n => n.id === registryId ? { ...n, data: { ...n.data, status: 'Match found!' }} : n));
+    // 1. Получаем данные от бэкенда
+    const data = await fetchPlan(intent);
     
-    // Появляется поставщик
-    setNodes((nds) => nds.concat({
-      id: supplierId,
-      type: 'agent',
-      data: { label: 'Steel Corp (Asia)', role: 'Supplier', status: 'Waiting...' },
-      position: { x: 700, y: 300 },
-    }));
+    if (!data) {
+      addLog("❌ Failed to connect to Backend Server.");
+      setIsProcessing(false);
+      return;
+    }
 
-    setEdges((eds) => eds.concat({
-      id: 'e-reg-supp',
-      source: registryId,
-      target: supplierId,
-      label: 'Agent Metadata',
-      animated: true,
-      style: { stroke: '#F59E0B' },
-    }));
-  }, 3000);
+    setPlanData(data); // Заполняем "окошки" данными
+    addLog(`✅ Plan Extracted: ${data.product} (${data.quantity} units)`);
 
-  // --- ШАГ 3: Переговоры (Оркестратор <-> Поставщик) ---
-  setTimeout(() => {
-    setNodes((nds) => nds.map(n => n.id === supplierId ? { ...n, data: { ...n.data, status: 'Negotiating price...' }} : n));
+    // --- СИМУЛЯЦИЯ ГРАФА НА ОСНОВЕ ДАННЫХ ---
     
-    setEdges((eds) => eds.concat({
-      id: 'e-org-supp',
-      source: 'orchestrator',
-      target: supplierId,
-      label: 'Negotiating RFQ',
-      animated: true,
-      style: { stroke: '#00ffff', strokeWidth: 2 },
-    }));
-  }, 5000);
+    // Шаг 1: Registry
+    const registryId = 'reg_1';
+    setTimeout(() => {
+      setNodes((nds) => nds.concat({
+        id: registryId,
+        type: 'agent',
+        data: { label: 'Global Registry', role: 'Registry', status: 'Searching...' },
+        position: { x: 400, y: 100 },
+      }));
+      setEdges((eds) => eds.concat({
+        id: 'e-org-reg',
+        source: 'orchestrator',
+        target: registryId,
+        label: 'Find Suppliers',
+        animated: true,
+        style: { stroke: '#EC4899' }
+      }));
+      addLog("🔎 Searching for suppliers in " + (data.constraints?.region || "Global Market"));
+    }, 1000);
 
-  // --- ШАГ 4: Завершение (Сделка) ---
-  setTimeout(() => {
-    setNodes((nds) => nds.map(n => n.id === supplierId ? { ...n, data: { ...n.data, status: 'Contract Signed ✅' }} : n));
-    setEdges((eds) => eds.map(e => e.id === 'e-org-supp' ? { ...e, animated: false, label: 'Deal: $12,400', style: { stroke: '#10B981', strokeWidth: 4 }} : e));
-    setIsProcessing(false);
-  }, 8000);
-};
+    // Шаг 2: Поставщик (на основе продукта из API)
+    const supplierId = 'supp_1';
+    setTimeout(() => {
+      setNodes((nds) => nds.concat({
+        id: supplierId,
+        type: 'agent',
+        data: { label: `Supplier: ${data.product}`, role: 'Supplier', status: 'Negotiating...' },
+        position: { x: 700, y: 300 },
+      }));
+      setEdges((eds) => eds.concat({
+        id: 'e-reg-supp',
+        source: registryId,
+        target: supplierId,
+        animated: true,
+        style: { stroke: '#F59E0B' }
+      }));
+      addLog(`🤝 Negotiating terms for ${data.quantity} units...`);
+    }, 3000);
+
+    // Шаг 3: Финализация
+    setTimeout(() => {
+      setEdges((eds) => eds.concat({
+        id: 'e-org-supp',
+        source: 'orchestrator',
+        target: supplierId,
+        label: `Deal Confirmed`,
+        animated: false,
+        style: { stroke: '#10B981', strokeWidth: 4 }
+      }));
+      addLog("🎯 Orchestration complete!");
+      setIsProcessing(false);
+    }, 5000);
+  };
 
   return (
-  <div className="app-container">
-      {/* HEADER & INPUT SECTION */}
+    <div className="app-container">
+      {/* ПАНЕЛЬ УПРАВЛЕНИЯ */}
       <div className="control-panel">
         <h1 className="title">
-          <Activity className="icon" /> NANDA Supply Chain <span className="highlight">Orchestrator</span>
+          <Activity className="icon" /> NANDA <span className="highlight">Orchestrator</span>
         </h1>
         <div className="input-group">
           <input
             type="text"
-            placeholder="Describe your intent (e.g., 'Source 500 drone motors from Asia...')"
+            placeholder="What do you need to source?"
             value={intent}
             onChange={(e) => setIntent(e.target.value)}
             disabled={isProcessing}
           />
           <button onClick={handleExecute} disabled={isProcessing || !intent}>
-            <Play size={18} /> {isProcessing ? 'Orchestrating...' : 'One Click Execute'}
+            <Play size={18} /> {isProcessing ? 'Processing...' : 'Execute'}
           </button>
         </div>
       </div>
 
-    {/* Холст графа */}
-    <ReactFlow 
-      nodes={nodes} 
-      edges={edges} 
-      nodeTypes={nodeTypes}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      fitView
-    >
-      <Background color="#222" gap={20} />
-      <Controls />
-    </ReactFlow>
-  </div>
-);
+      <div className="main-layout">
+        {/* ЛЕВАЯ ПАНЕЛЬ: ЛОГИ */}
+        <div className="side-panel logs-panel">
+          <h3><Terminal size={16} /> Live Logs</h3>
+          <div className="log-list">
+            {logs.map((log, i) => <div key={i} className="log-item">{log}</div>)}
+          </div>
+        </div>
+
+        {/* ЦЕНТР: ГРАФ */}
+        <div className="graph-container">
+          <ReactFlow 
+            nodes={nodes} 
+            edges={edges} 
+            nodeTypes={nodeTypes}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            fitView
+          >
+            <Background color="#1a1a1a" gap={20} />
+            <Controls />
+          </ReactFlow>
+        </div>
+
+        {/* ПРАВАЯ ПАНЕЛЬ: ТЕ САМЫЕ ОКОШКИ */}
+        <div className="side-panel data-panel">
+          <h3><Brain size={18} color="#8B5CF6" /> AI Extraction</h3>
+          
+          <div className="info-box">
+            <label><Box size={14} /> Product</label>
+            <div className="value">{planData?.product || '—'}</div>
+          </div>
+
+          <div className="info-box">
+            <label><Activity size={14} /> Quantity</label>
+            <div className="value">{planData?.quantity || '0'}</div>
+          </div>
+
+          <div className="info-box">
+            <label><MapPin size={14} /> Destination</label>
+            <div className="value">{planData?.constraints?.region || 'Not set'}</div>
+          </div>
+
+          <div className="info-box checklist">
+            <label><ClipboardList size={14} /> Action Plan</label>
+            <ul>
+              {planData?.checklist?.map((step, i) => (
+                <li key={i}>{step}</li>
+              )) || <li>Waiting for intent...</li>}
+            </ul>
+          </div>
+          
+          {planData?.reasoning_summary && (
+            <div className="reasoning-note">
+              <small>{planData.reasoning_summary}</small>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
