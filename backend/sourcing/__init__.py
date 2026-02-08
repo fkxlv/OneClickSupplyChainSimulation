@@ -2,6 +2,8 @@ import os
 
 from flask import Flask
 from flask_cors import CORS
+from flask_marshmallow import Marshmallow
+from . import routes
 
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
@@ -21,6 +23,8 @@ def create_app(test_config=None):
     except OSError:
         pass
     
+    app.register_blueprint(routes.sourcing_bp, url_prefix="/sourcing")
+
     @app.route('/')
     def index():
         return "THE SOURCING AGENT!"
