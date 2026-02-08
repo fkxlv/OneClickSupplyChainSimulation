@@ -1,0 +1,99 @@
+.agent-window {
+  background: rgba(17, 24, 39, 0.9);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 10px;
+  width: 220px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+/* Шапка окна */
+.window-header {
+  background: rgba(31, 41, 55, 0.95);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+.window-controls {
+  display: flex;
+  gap: 6px;
+  margin-right: 12px;
+}
+
+.control {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.close { background: #ff5f56; }
+.minimize { background: #ffbd2e; }
+.maximize { background: #27c93f; }
+
+.window-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Тело окна */
+.window-body {
+  padding: 15px;
+}
+
+.agent-name {
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.agent-status-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #10b981;
+  font-size: 11px;
+  margin-bottom: 12px;
+}
+
+/* Эффект печатающегося текста */
+.agent-terminal-output {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 8px;
+  border-radius: 6px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 10px;
+  color: #6ee7b7;
+}
+
+.typing-text {
+  margin: 2px 0;
+  opacity: 0.8;
+}
+
+.pulse-icon {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+/* Скрываем стандартные точки React Flow */
+.custom-handle {
+  background: #8b5cf6 !important;
+  width: 8px !important;
+  height: 8px !important;
+  border: 2px solid #0b0f1a !important;
+}
