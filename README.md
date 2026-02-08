@@ -4,6 +4,11 @@ One click AI-supply chain agents NANDA-native "Internet of Agents" simulation us
 # How to run servers
 The 4 Agents are running through with following commands
 
+- DNS:
+```
+flask --app backend.registry run --debug --port 5000
+```
+
 - Planner:
 ```
 flask --app backend.planner run --debug --port 5001
