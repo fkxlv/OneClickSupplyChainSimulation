@@ -46,10 +46,10 @@ export default function App() {
         body: JSON.stringify({ intent })
       });
       
-      if (!response.ok) throw new Error("Ошибка сервера");
+      if (!response.ok) throw new Error("Server error");
       
       const data = await response.json();
-      addLog(`План получен: ${data.product}`);
+      addLog(`Plan received: ${data.product}`);
 
       // 3. Анимируем появление шагов из checklist
       let lastId = orchestratorId;
@@ -75,16 +75,16 @@ export default function App() {
         setNodes(nds => [...nds, newNode]);
         setEdges(eds => [...eds, newEdge]);
         lastId = stepId;
-        addLog(`Развернут агент: ${data.checklist[i]}`);
+        addLog(`Agent created: ${data.checklist[i]}`);
       }
 
       // Обновляем статус главного узла
       setNodes(nds => nds.map(n => n.id === 'node-0' ? 
-        {...n, data: {...n.data, status: 'Готово'}} : n
+        {...n, data: {...n.data, status: 'Done'}} : n
       ));
 
     } catch (err) {
-      addLog("Ошибка: Не удалось связаться с сервером");
+      addLog("Error:  Can not connect to server");
       console.error(err);
     } finally {
       setIsProcessing(false);
@@ -108,12 +108,12 @@ export default function App() {
             <input 
               value={intent} 
               onChange={(e) => setIntent(e.target.value)}
-              placeholder="Введите задачу (например: Закупить 50 дронов)..." 
+              placeholder="Input a prompt" 
               disabled={isProcessing}
             />
             <button onClick={handleExecute} disabled={isProcessing}>
               {isProcessing ? <Activity className="spin" size={18} /> : <Play size={18} />}
-              <span>Запустить</span>
+              <span>Go</span>
             </button>
           </div>
         </header>
