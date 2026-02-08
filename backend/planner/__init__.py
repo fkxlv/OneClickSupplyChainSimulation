@@ -6,7 +6,7 @@ def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
     
     # Настройка CORS крайне важна для работы fetch с другого порта
-    CORS(app, resources={r"/*": {"origins": "*"}}) 
+    CORS(app) 
 
     # ... остальной код регистрации ...
     from .routes import bp as planner_bp
