@@ -11,6 +11,7 @@ AGENTS = []
 def load_agents_from_file(path: str):
     global AGENTS
     if not os.path.exists(path):
+        print("the path doesnt exist")
         AGENTS = []
         return
 

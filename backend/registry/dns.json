@@ -1,56 +1,58 @@
-[
-    {
-        "agent_id": "planner",
-        "endpoint": "http://127.0.0.1:5001",
-        "role": "planner",
-        "capabilities": [
-            "customer_intake",
-            "intent_extraction",
-            "requirement_structuring",
-            "missing_info_detection",
-            "heuristic_selection",
-            "checklist_generation",
-            "final_validation"
-        ]
-    },
-    {
-        "agent_id": "sourcing",
-        "role": "sourcing",
-        "endpoint": "http://127.0.0.1:5002",
-        "capabilities": [
-            "supplier_discovery",
-            "logistics_discovery",
-            "supplier_ranking",
-            "logistics_ranking",
-            "shortlist_generation",
-            "requirement_feedback"
-        ]
-    },
-    {
-        "agent_id": "execution",
-        "role": "execution",
-        "endpoint": "http://127.0.0.1:5003",
-        "capabilities": [
-            "supplier_contact",
-            "contract_negotiation",
-            "offer_generation",
-            "counter_offer_handling",
-            "retry_management",
-            "deal_finalization",
-            "result_reporting"
-        ]
-    },
-    {
-        "agent_id": "manufacturer",
-        "role": "manufacturer",
-        "endpoint": "http://127.0.0.1:5004",
-        "capabilities": [
-            "quote_generation",
-            "contract_acceptance",
-            "contract_rejection",
-            "counter_offer_generation",
-            "delivery_commitment",
-            "pricing_policy_enforcement"
-        ]
-    }
-]
+{
+    "agents": [
+        {
+            "agent_id": "planner",
+            "endpoint": "http://127.0.0.1:5001",
+            "role": "planner",
+            "capabilities": [
+                "customer_intake",
+                "intent_extraction",
+                "requirement_structuring",
+                "missing_info_detection",
+                "heuristic_selection",
+                "checklist_generation",
+                "final_validation"
+            ]
+        },
+        {
+            "agent_id": "sourcing",
+            "role": "sourcing",
+            "endpoint": "http://127.0.0.1:5002",
+            "capabilities": [
+                "supplier_discovery",
+                "logistics_discovery",
+                "supplier_ranking",
+                "logistics_ranking",
+                "shortlist_generation",
+                "requirement_feedback"
+            ]
+        },
+        {
+            "agent_id": "execution",
+            "role": "execution",
+            "endpoint": "http://127.0.0.1:5003",
+            "capabilities": [
+                "supplier_contact",
+                "contract_negotiation",
+                "offer_generation",
+                "counter_offer_handling",
+                "retry_management",
+                "deal_finalization",
+                "result_reporting"
+            ]
+        },
+        {
+            "agent_id": "manufacturer",
+            "role": "manufacturer",
+            "endpoint": "http://127.0.0.1:5004",
+            "capabilities": [
+                "quote_generation",
+                "contract_acceptance",
+                "contract_rejection",
+                "counter_offer_generation",
+                "delivery_commitment",
+                "pricing_policy_enforcement"
+            ]
+        }
+    ]
+}
