@@ -12,3 +12,7 @@ def create_app(test_config=None):
     app.register_blueprint(routes.manufacturer_bp)
 
     return app
+
+if __name__ == "__main__":
+    app = create_app()
+    app.run(port=5004, debug=True)
