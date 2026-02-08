@@ -23,73 +23,122 @@ export default function App() {
   const delay = (ms) => new Promise(res => setTimeout(res, ms));
 
   const handleExecute = async () => {
-    if (!intent) return;
-    setIsProcessing(true);
-    setNodes([]); 
-    setEdges([]);
-    addLog("Запрос отправлен в Gemini Planner...");
+    // ===== PLANNER =====
+    updateAgentState("Planner", prev => ({
+      ...prev,
+      status: "running",
+      steps: [],
+      output: null
+    }));
 
-    try {
-      // 1. Создаем начальный узел (Оркестратор)
-      const orchestratorId = 'node-0';
-      setNodes([{
-        id: orchestratorId,
-        type: 'agent',
-        data: { label: 'Orchestrator', role: 'CORE AI', status: 'Thinking...' },
-        position: { x: 400, y: 50 },
-      }]);
+    const planner = runPlanner(inputData);
+    let plannerResult = null;
 
-      // 2. HTTP POST запрос к вашему API
-      const response = await fetch('http://localhost:5001/planner/plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ intent })
-      });
-      
-      if (!response.ok) throw new Error("Server error");
-      
-      const data = await response.json();
-      addLog(`Plan received: ${data.product}`);
+    while (true) {
+      const { value, done } = await planner.next();
 
-      // 3. Анимируем появление шагов из checklist
-      let lastId = orchestratorId;
-      for (let i = 0; i < data.checklist.length; i++) {
-        await delay(800); 
-        
-        const stepId = `step-${i}`;
-        const newNode = {
-          id: stepId,
-          type: 'agent',
-          data: { label: data.checklist[i], role: 'SUPPLY AGENT', status: 'Active' },
-          position: { x: 400 + (i % 2 === 0 ? 150 : -150), y: 150 + (i + 1) * 150 },
-        };
-
-        const newEdge = {
-          id: `e-${lastId}-${stepId}`,
-          source: lastId,
-          target: stepId,
-          animated: true,
-          style: { stroke: '#8b5cf6' }
-        };
-
-        setNodes(nds => [...nds, newNode]);
-        setEdges(eds => [...eds, newEdge]);
-        lastId = stepId;
-        addLog(`Agent created: ${data.checklist[i]}`);
+      if (done) {
+        plannerResult = value;
+        break;
       }
 
-      // Обновляем статус главного узла
-      setNodes(nds => nds.map(n => n.id === 'node-0' ? 
-        {...n, data: {...n.data, status: 'Done'}} : n
-      ));
-
-    } catch (err) {
-      addLog("Error:  Can not connect to server");
-      console.error(err);
-    } finally {
-      setIsProcessing(false);
+      updateAgentState("Planner", prev => ({
+        ...prev,
+        steps: [
+          ...prev.steps,
+          {
+            timestamp: new Date().toISOString(),
+            action: value.action,
+            details: value.details
+          }
+        ]
+      }));
     }
+
+    updateAgentState("Planner", prev => ({
+      ...prev,
+      status: "completed",
+      output: plannerResult
+    }));
+
+    // ===== SOURCING =====
+    updateAgentState("Sourcing", prev => ({
+      ...prev,
+      status: "running",
+      steps: [],
+      output: null
+    }));
+
+    const sourcing = runSourcing(plannerResult);
+    let sourcingResult = null;
+
+    while (true) {
+      const { value, done } = await sourcing.next();
+
+      if (done) {
+        sourcingResult = value;
+        break;
+      }
+
+      updateAgentState("Sourcing", prev => ({
+        ...prev,
+        steps: [
+          ...prev.steps,
+          {
+            timestamp: new Date().toISOString(),
+            action: value.action,
+            details: value.details
+          }
+        ]
+      }));
+    }
+
+    updateAgentState("Sourcing", prev => ({
+      ...prev,
+      status: "completed",
+      output: sourcingResult
+    }));
+
+    // ===== EXECUTOR =====
+    updateAgentState("Executor", prev => ({
+      ...prev,
+      status: "running",
+      steps: [],
+      output: null
+    }));
+
+    const executor = runExecutor(sourcingResult);
+    let executorResult = null;
+
+    while (true) {
+      const { value, done } = await executor.next();
+
+      if (done) {
+        executorResult = value;
+        break;
+      }
+
+      updateAgentState("Executor", prev => ({
+        ...prev,
+        steps: [
+          ...prev.steps,
+          {
+            timestamp: new Date().toISOString(),
+            action: value.action,
+            details: value.details
+          }
+        ]
+      }));
+    }
+
+    updateAgentState("Executor", prev => ({
+      ...prev,
+      status: "completed",
+      output: executorResult
+    }));
   };
+
+
 
   return (
     <div className="app-viewport">
@@ -105,10 +154,10 @@ export default function App() {
       <main className="main-content">
         <header className="top-bar">
           <div className="input-wrapper">
-            <input 
-              value={intent} 
+            <input
+              value={intent}
               onChange={(e) => setIntent(e.target.value)}
-              placeholder="Input a prompt" 
+              placeholder="Input a prompt"
               disabled={isProcessing}
             />
             <button onClick={handleExecute} disabled={isProcessing}>
