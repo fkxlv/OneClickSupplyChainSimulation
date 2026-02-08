@@ -29,52 +29,103 @@ def search_suppliers(product: str, region: str) -> list[dict]:
     suppliers = []
     for item in results.get("organic_results", []):
         suppliers.append({
+            "supplier_id": str(uuid.uuid4()),
             "name": item.get("title"),
-            "website": item.get("link"),
             "region": region,
-            "capabilities": [product]
+            "capabilities": [product],
+            "base_unit_cost": 0,
+            "base_lead_time_days": 0,
+            "min_total_price": 0,
+            "max_total_price":0,
+            max_lead_time_delays:0,
         })
 
     return suppliers
 
-import os
-import json
-import requests
+def complete_the_data_with_gemini(
+    request_id: str,
+    region: str,
+    heuristic: str,
+    suppliers: list[dict]
+    ) -> list[dict]:
+
+    model = genai.GenerativeModel("gemini-1.5-pro")
+
+    prompt = f"""
+        You are a sourcing expert.
+
+        Request ID: {request_id}
+        Product: {product}
+        Region: {region}
+
+        Given the supplier list below, infer and fill in missing fields:
+        - base_unit_cost (float)
+        - base_lead_time_days (int)
+        - min_total_price (float)
+        - max_total_price (float)
+        - max_lead_time_days (int)
+
+Use realistic market estimates for the region and product.
+Return ONLY valid JSON with the same list structure.
+
+Suppliers:
+{json.dumps(suppliers, indent=2)}
+"""
+
+    response = model.generate_content(prompt)
+
+    return json.loads(response.text)
+
+import os, json
 import google.generativeai as genai
-from shared.schemas.sourcing import SourcingResultSchema
 
-# Configure Gemini
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-1.5-flash")
-
-SERPAPI_API_KEY = os.environ.get("SERPAPI_API_KEY")
+genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 
-def search_suppliers(product: str, region: str) -> list[dict]:
+def rank_suppliers_with_gemini(
+    request_id: str,
+    heuristic: str,
+    suppliers: list[dict]
+) -> dict:
     """
-    Searches suppliers using SerpAPI and returns a simple list.
+    Uses Gemini to rank suppliers by optimality.
+    Index 0 = most optimal.
     """
-    params = {
-        "q": f"{product} supplier manufacturer {region}",
-        "engine": "google",
-        "api_key": SERPAPI_API_KEY,
-        "num": 5
+
+    if heuristic not in {"cost", "deadline"}:
+        raise ValueError("heuristic must be 'cost' or 'deadline'")
+
+    model = genai.GenerativeModel("gemini-1.5-pro")
+
+    prompt = f"""
+        You are a sourcing optimization engine.
+
+        Heuristic:
+        - "cost": prioritize lowest total price, then lead time
+        - "deadline": prioritize shortest lead time, then cost
+
+        Task:
+        Reorder the suppliers from most optimal (index 0) to least optimal based on heuristic.
+        Do NOT modify supplier fields.
+        Do NOT add or remove suppliers.
+        Return ONLY valid JSON.
+
+Suppliers:
+{json.dumps(suppliers, indent=2)}
+"""
+
+    response = model.generate_content(prompt)
+
+    ranked_suppliers = json.loads(response.text)
+
+    return {
+        "request_id": request_id,
+        "heuristic": heuristic,
+        "ranked_suppliers": ranked_suppliers,
+        "notes": f"Ranking inferred by Gemini using '{heuristic}' heuristic"
     }
 
-    r = requests.get("https://serpapi.com/search", params=params)
-    r.raise_for_status()
-    results = r.json()
 
-    suppliers = []
-    for item in results.get("organic_results", []):
-        suppliers.append({
-            "name": item.get("title"),
-            "website": item.get("link"),
-            "region": region,
-            "capabilities": [product]
-        })
-
-    return suppliers
 
 
 def estimate_and_rank_with_gemini(
