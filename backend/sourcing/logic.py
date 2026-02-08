@@ -1,11 +1,13 @@
 import os
 import json
 import requests
-import google.genai as genai
+#import google.genai as genai
+import google.generativeai as genai
 from backend.schemas.sourcing import SourcingResultSchema
 
 # Configure Gemini
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+#genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+genai.configure(api_key="AIzaSyCq2h7jVlCvGwdSH627MV7ChrYZ6GinBSc")
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 SERPAPI_API_KEY = os.environ.get("SERPAPI_API_KEY")
@@ -65,21 +67,17 @@ def complete_the_data_with_gemini(
         - max_total_price (float)
         - max_lead_time_days (int)
 
-Use realistic market estimates for the region and product.
-Return ONLY valid JSON with the same list structure.
+        Use realistic market estimates for the region and product.
+        Return ONLY valid JSON with the same list structure.
 
-Suppliers:
-{json.dumps(suppliers, indent=2)}
-"""
+        Suppliers:
+        {json.dumps(suppliers, indent=2)}
+        """
 
     response = model.generate_content(prompt)
 
     return json.loads(response.text)
 
-import os, json
-import google.generativeai as genai
-
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 
 def rank_suppliers_with_gemini(

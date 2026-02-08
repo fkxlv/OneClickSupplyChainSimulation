@@ -23,7 +23,7 @@ def create_app(test_config=None):
     except OSError:
         pass
     
-    app.register_blueprint(routes.sourcing_hp, url_prefix="/sourcing")
+    app.register_blueprint(routes.sourcing_bp, url_prefix="/sourcing")
 
     @app.route('/')
     def index():

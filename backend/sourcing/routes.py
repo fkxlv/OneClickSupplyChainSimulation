@@ -26,8 +26,16 @@ def source():
         planner_input["constraints"].get("region")
     )
 
+    #complete the data
+    suppliers = complete_the_data_with_gemini(
+        request_id=planner_input["request_id"],
+        region=planner_input["constraints"].get("region"),
+        heuristic=planner_input["heuristic"],
+        suppliers=suppliers
+    )
+
     # ask Gemini to estimate + rank
-    result = estimate_and_rank_with_gemini(
+    result = rank_suppliers_with_gemini(
         request_id=planner_input["request_id"],
         heuristic=planner_input["heuristic"],
         suppliers=suppliers
