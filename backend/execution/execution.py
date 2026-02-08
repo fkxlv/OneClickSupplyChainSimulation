@@ -30,15 +30,17 @@ def receive_from_sourcing(data):
         failed_to_negotiate()
         return
 
-    manufacturer_agent = get_agent({"role": "manufacturer"})
+    manufacturer_agent = get_agent({"role": "manufacturer"})['matches'][0]
     if not manufacturer_agent or manufacturer_agent.get("endpoint") is None:
         logger.debug("receive_from_sourcing: manufacturer agent not found")
         failed_to_negotiate()
         return
 
+    print("going through supplies")
     for supplier in data["ranked_suppliers"]:
         try:
             if negotiate_with_manufacturer(supplier, manufacturer_agent):
+                print("success")
                 success(supplier, manufacturer_agent)
                 break
         except Exception:
@@ -50,7 +52,7 @@ def negotiate_with_manufacturer(supplier, manufacturer):
     payload = "Can I buy it?"
     try:
         # TODO: change to a valid request -- keep emailing behavior for now
-        email = send_mail(manufacturer, payload)
+        email = requests.get(manufacturer["endpoint"] + "/email")
         status = getattr(email, "status_code", None)
         logger.debug("negotiate_with_manufacturer: email status=%s", status)
         if status != 200:
@@ -59,13 +61,6 @@ def negotiate_with_manufacturer(supplier, manufacturer):
     except Exception:
         logger.exception("negotiate_with_manufacturer: emailing failed")
         return False
-
-def send_mail():
-    class Response:
-        def __init__(self, code):
-            self.status_code = code
-
-    return Response(200)
 
 def success(supplier, manufacturer):
     logger.debug("success: supplier=%s manufacturer=%s", supplier, manufacturer)
