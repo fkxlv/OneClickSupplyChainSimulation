@@ -4,17 +4,12 @@ from . import dns
 
 def create_app():
     app = Flask(__name__)
-
-    # where your agents.json lives
-    agents_path = os.getenv(
-        "AGENTS_JSON_PATH",
-        "./dns.json"
-    )
-
-    app.config["AGENTS_JSON_PATH"] = agents_path
+    
+    dns_json_path = os.path.join(os.path.dirname(__file__), "dns.json")
+    app.config["AGENTS_JSON_PATH"] = dns_json_path
 
     # Load agents at startup
-    dns.load_agents_from_file(agents_path)
+    dns.load_agents_from_file(dns_json_path)
 
     # Register blueprint
     app.register_blueprint(dns.registry_bp, url_prefix="/registry")
