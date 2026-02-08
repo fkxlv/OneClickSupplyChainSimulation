@@ -64,7 +64,7 @@ def generate_plan():
         if not sourcing or sourcing.get("endpoint") is None:
             logger.error("Cannot find the sourcing agent")
         else:
-            request.post(sourcing["endpoint"] + "/source", json=validated_data)
+            requests.post(sourcing["endpoint"] + "/source", json=validated_data)
 
         # Если всё ок, возвращаем результат
         return jsonify(validated_data), 200

@@ -70,6 +70,6 @@ def source():
     if not execution or execution.get("endpoint") is None:
         logger.error("Cannot find the execution agent")
     else:
-        request.post(execution["endpoint"] + "/execute", json=result)
+        requests.post(execution["endpoint"] + "/execute", json=result)
 
     return jsonify(result), 200
