@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 # 1. Загружаем переменные окружения
 load_dotenv()
-api_key = "AIzaSyCq2h7jVlCvGwdSH627MV7ChrYZ6GinBSc"
+api_key = " " #API NEEDED
 
 genai.configure(api_key=api_key)
 
